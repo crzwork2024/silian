@@ -9,8 +9,7 @@ venv/
 env/
 
 # Data
-data/chroma_db/
-data/*.xlsx # Assuming your Excel file might be large or sensitive
+data/
 *.log
 
 # Environment variables
