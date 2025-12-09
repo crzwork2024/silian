@@ -1,0 +1,10 @@
+pandas
+openpyxl
+chromadb
+sentence-transformers
+fastapi
+uvicorn
+langchain
+langchain-community # For SentenceTransformerEmbeddings
+requests # For DeepSeek API calls
+python-dotenv # For loading environment variables from .env file

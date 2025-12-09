@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Fault Diagnosis System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>RAG 故障诊断系统</h1>
+
+        <div class="input-section">
+            <label for="faultDescription">故障描述:</label>
+            <textarea id="faultDescription" placeholder="请输入故障描述..." rows="5"></textarea>
+
+            <label for="productModelFilter">产品型号 (可选):</label>
+            <select id="productModelFilter">
+                <option value="">所有型号</option>
+            </select>
+
+            <button id="submitQuery">提交查询</button>
+        </div>
+
+        <div class="output-section">
+            <h2>诊断结果:</h2>
+            <pre id="diagnosisResult"></pre>
+
+            <h2>相关记录:</h2>
+            <div id="sourceDocuments"></div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

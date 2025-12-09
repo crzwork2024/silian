@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Data
+data/chroma_db/
+data/*.xlsx # Assuming your Excel file might be large or sensitive
+*.log
+
+# Environment variables
+.env
+
+# Models (if downloaded locally)
+model/
+
+# IDE and OS specific files
+.DS_Store
+Thumbs.db
+.cursor/
+*.code-workspace
+*.sublime-project
+*.idea/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
