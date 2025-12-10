@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -152,6 +152,7 @@ def deepseek_call(prompt: str) -> str:
 class RAGQuery(BaseModel):
     query: str
     product_model: Optional[str] = None
+    show_thought_process: bool = False # New field to request thought process
 
 class RAGResponse(BaseModel):
     summary: str
@@ -159,9 +160,10 @@ class RAGResponse(BaseModel):
 
 # --- FastAPI Endpoints ---
 @app.post("/rag_query", response_model=RAGResponse)
-async def rag_query(query_data: RAGQuery):
-    logging.info(f"Received RAG query: {query_data.query}, Product Model: {query_data.product_model}")
+async def rag_query(query_data: RAGQuery, request: Request):
     
+    logging.info(f"Received RAG query: {query_data.query}, Product Model: {query_data.product_model}, User requests to show thought process: {query_data.show_thought_process}")
+
     # 1. Embed the user's query
     query_embedding: List[float]
     if embedding_model:
@@ -228,10 +230,24 @@ async def rag_query(query_data: RAGQuery):
     )
     
     logging.info("Sending prompt to LLM...")
-    llm_summary = deepseek_call(prompt)
-    logging.info("Received response from LLM.")
+    llm_raw_response = deepseek_call(prompt)
+    logging.info("Received raw response from LLM.")
 
-    return RAGResponse(summary=llm_summary, source_documents=source_documents)
+    final_summary = llm_raw_response
+    
+    if not query_data.show_thought_process: # Corrected logic: if False, do NOT show thought process
+        # If show_thought_process is False, extract content after </think>
+        logging.info("Extracting final summary from LLM response (hiding thought process)...")
+        think_tag = "</think>"
+        if think_tag in llm_raw_response:
+            final_summary = llm_raw_response.split(think_tag, 1)[1].strip()
+        else:
+            logging.warning("LLM response did not contain '</think>' tag, returning full response.")
+    else:
+        logging.info("Returning full LLM response including thought process.")
+            
+    logging.info(f"Final summary to be sent to frontend: {final_summary[:500]}...") # Log truncated final summary
+    return RAGResponse(summary=final_summary, source_documents=source_documents)
 
 
 @app.get("/product_models", response_model=List[str])

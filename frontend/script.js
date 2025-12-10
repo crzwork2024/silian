@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitQueryButton = document.getElementById('submitQuery');
     const diagnosisResultDiv = document.getElementById('diagnosisResult');
     const sourceDocumentsDiv = document.getElementById('sourceDocuments');
+    const showThoughtProcessCheckbox = document.getElementById('showThoughtProcess'); // Re-added
     const loadingSpinner = document.createElement('div');
     loadingSpinner.className = 'loading-spinner';
     document.querySelector('.container').appendChild(loadingSpinner);
@@ -33,6 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
     submitQueryButton.addEventListener('click', async () => {
         const query = faultDescriptionInput.value.trim();
         const productModel = productModelFilter.value;
+        // Invert the checkbox value: if '不显示思考过程' is checked, send true for NOT showing thought process (i.e., show_thought_process = false)
+        const shouldShowThoughtProcess = showThoughtProcessCheckbox.checked;
+
+        console.log('showThoughtProcessCheckbox.checked:', showThoughtProcessCheckbox.checked); // Debug log
+        console.log('shouldShowThoughtProcess (sent to backend):', shouldShowThoughtProcess); // Debug log
 
         if (!query) {
             alert("请输入故障描述。");
@@ -51,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({
                     query: query,
-                    product_model: productModel || null // Send null if "所有型号" is selected
+                    product_model: productModel || null, // Send null if "所有型号" is selected
+                    show_thought_process: shouldShowThoughtProcess // Send the inverted checkbox state
                 })
             });
 
@@ -60,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            diagnosisResultDiv.textContent = data.summary;
+            diagnosisResultDiv.textContent = data.summary; // Directly use data.summary, as backend handles thought process
 
             if (data.source_documents && data.source_documents.length > 0) {
                 data.source_documents.forEach(doc => {
@@ -70,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p><strong>产品型号:</strong> ${doc.product_model}</p>
                         <p><strong>故障描述:</strong> ${doc.fault_description}</p>
                         <p><strong>处理方式及未解决问题:</strong> ${doc.solution}</p>
-                        <p><strong>相似度:</strong> ${doc.distance.toFixed(4)}</p>
+                        <p><strong>距离值（越小越相似）:</strong> ${doc.distance.toFixed(4)}</p>
                     `;
                     sourceDocumentsDiv.appendChild(docDiv);
                 });
