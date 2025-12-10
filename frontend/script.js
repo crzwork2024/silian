@@ -70,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
             diagnosisResultDiv.textContent = data.summary; // Directly use data.summary, as backend handles thought process
 
             if (data.source_documents && data.source_documents.length > 0) {
-                data.source_documents.forEach(doc => {
+                // Limit to show only the first 3 source documents
+                data.source_documents.slice(0, 3).forEach(doc => {
                     const docDiv = document.createElement('div');
                     docDiv.className = 'source-document';
                     docDiv.innerHTML = `

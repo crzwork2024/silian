@@ -7,6 +7,7 @@ import sys
 import requests # Import requests for API calls
 from typing import List # Import List for type hinting
 import shutil # Import shutil for directory removal
+from fastapi import HTTPException # Import HTTPException for error handling in remote_embed_call
 
 # Add the parent directory to the Python path to allow importing config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -37,6 +38,16 @@ def load_excel_data(file_path: str) -> pd.DataFrame:
         sys.exit(1)
 
 
+# --- Custom Embedding Wrapper Class (copied from main.py) ---
+class CustomEmbeddingWrapper:
+    """A wrapper class for SentenceTransformer models to provide a consistent encode interface."""
+    def __init__(self, model_instance: SentenceTransformer):
+        self.model = model_instance
+
+    def encode(self, sentences: List[str], **kwargs) -> List[List[float]]:
+        """Encodes a list of sentences into embeddings."""
+        return self.model.encode(sentences, **kwargs).tolist()
+
 def remote_embed_call(texts: List[str]) -> List[List[float]]:
     """Calls the remote embedding API to get embeddings for the given texts."""
     headers = {
@@ -44,7 +55,7 @@ def remote_embed_call(texts: List[str]) -> List[List[float]]:
         "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"
     }
     payload = {
-        "model": config.EMBEDDING_MODEL_PATH, # The model name from config is used as the remote model ID
+        "model": config.REMOTE_EMBEDDING_MODEL_ID, # Use the explicitly defined remote model ID
         "input": texts
     }
     try:
@@ -54,16 +65,17 @@ def remote_embed_call(texts: List[str]) -> List[List[float]]:
         return embeddings
     except requests.exceptions.RequestException as e:
         logging.error(f"Remote embedding API call failed: {e}")
+        # In data_processor, we exit if remote call fails as it's critical for embedding
         sys.exit(1)
 
 
 def initialize_embedding_model(model_path: str):
-    """Initializes and returns the SentenceTransformer embedding model or None if remote is to be used."""
+    """Initializes and returns the CustomEmbeddingWrapper (for local) or None if remote is to be used."""
     if os.path.isdir(model_path):
         try:
-            model = SentenceTransformer(model_path)
+            model_instance = SentenceTransformer(model_path)
             logging.info(f"Local embedding model loaded successfully from {model_path}.")
-            return model
+            return CustomEmbeddingWrapper(model_instance) # Wrap the SentenceTransformer model
         except Exception as e:
             logging.warning(f"Failed to load local embedding model from {model_path}: {e}. Will attempt to use remote embedding API if configured.")
             return None
@@ -76,10 +88,6 @@ def initialize_chroma_client(persist_directory: str):
     """Initializes and returns the ChromaDB client."""
     try:
         # Ensure the persistence directory is clean if a fresh start is needed for dimension changes
-        if os.path.exists(persist_directory):
-            import shutil
-            shutil.rmtree(persist_directory)
-            logging.info(f"Removed existing ChromaDB directory: {persist_directory}")
         os.makedirs(persist_directory, exist_ok=True)
 
         client = chromadb.Client(chromadb.config.Settings(
@@ -127,7 +135,7 @@ def process_and_store_data(
         # Determine the expected embedding dimension from the current model
         sample_text = ["test"]
         if embedding_model:
-            expected_dimension = len(embedding_model.encode(sample_text).tolist()[0])
+            expected_dimension = len(embedding_model.encode(sample_text)[0]) # No .tolist() needed for CustomEmbeddingWrapper
         elif config.EMBEDDING_API_URL and config.DEEPSEEK_API_KEY:
             expected_dimension = len(remote_embed_call(sample_text)[0])
         else:
@@ -161,7 +169,7 @@ def process_and_store_data(
 
         logging.info("Generating embeddings...")
         if embedding_model:
-            embeddings = embedding_model.encode(documents, show_progress_bar=True).tolist()
+            embeddings = embedding_model.encode(documents, show_progress_bar=True) # No .tolist() needed for CustomEmbeddingWrapper
             logging.info("Embeddings generated using local model.")
         else:
             # Use remote embedding API

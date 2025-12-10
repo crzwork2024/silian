@@ -17,10 +17,13 @@ EXCEL_FILE_PATH = os.path.join(DATA_DIR, "fault_data.xlsx")
 
 # --- ChromaDB Configuration ---
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "chroma_db")
-COLLECTION_NAME = "fault_descriptions"
+COLLECTION_NAME = "fault_descriptions_local_model" # Changed collection name to force recreation
+#COLLECTION_NAME = "fault_descriptions_remote_model" # Changed collection name to force recreation
 
 # --- Embedding Model Configuration ---
-EMBEDDING_MODEL_PATH = "BAAI/bge-large-zh-v1.5" # Or local path: os.path.join(MODEL_DIR, "embedding_model")
+EMBEDDING_MODEL_PATH = os.path.join(BASE_DIR, "model", "acge_text_embedding")
+#EMBEDDING_MODEL_PATH = "force_remote_embedding" # Set to a non-existent path to force remote embedding
+REMOTE_EMBEDDING_MODEL_ID = "BAAI/bge-large-zh-v1.5" # Explicitly define remote model ID
 EMBEDDING_API_URL = "https://api.siliconflow.cn/v1/embeddings"
 
 # --- LLM API Configuration ---
@@ -39,7 +42,7 @@ EXCEL_COL_FAULT_DESCRIPTION = "故障描述"
 EXCEL_COL_SOLUTION = "处理方式及未解决问题"
 
 # --- RAG System Configuration ---
-TOP_K_RESULTS = 3  # Number of similar records to retrieve from ChromaDB
+TOP_K_RESULTS = 2  # Number of similar records to retrieve from ChromaDB
 
 # --- Logging Configuration ---
 LOG_FILE_PATH = os.path.join(BASE_DIR, "rag_system.log")

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +45,16 @@ async def read_root():
     with open(os.path.join(config.FRONTEND_DIR, "index.html"), "r", encoding="utf-8") as f:
         return f.read()
 
+# --- Custom Embedding Wrapper Class ---
+class CustomEmbeddingWrapper:
+    """A wrapper class for SentenceTransformer models to provide a consistent encode interface."""
+    def __init__(self, model_instance: SentenceTransformer):
+        self.model = model_instance
+
+    def encode(self, sentences: List[str], **kwargs) -> List[List[float]]:
+        """Encodes a list of sentences into embeddings."""
+        return self.model.encode(sentences, **kwargs).tolist()
+
 # --- Remote Embedding API Call Function ---
 def remote_embed_call(texts: List[str]) -> List[List[float]]:
     """Calls the remote embedding API to get embeddings for the given texts."""
@@ -53,7 +63,7 @@ def remote_embed_call(texts: List[str]) -> List[List[float]]:
         "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"
     }
     payload = {
-        "model": config.EMBEDDING_MODEL_PATH, # The model name from config is used as the remote model ID
+        "model": config.REMOTE_EMBEDDING_MODEL_ID, # Use the explicitly defined remote model ID
         "input": texts
     }
     try:
@@ -75,7 +85,7 @@ def initialize_embedding_model(model_path: str):
         try:
             model = SentenceTransformer(model_path)
             logging.info(f"Local embedding model loaded successfully from {model_path}.")
-            return model
+            return CustomEmbeddingWrapper(model) # Wrap the SentenceTransformer model
         except Exception as e:
             logging.warning(f"Failed to load local embedding model from {model_path}: {e}. Attempting to use remote embedding API if configured.")
             return None
@@ -106,7 +116,7 @@ try:
     sample_text = ["test"]
     expected_dimension: int
     if embedding_model:
-        expected_dimension = len(embedding_model.encode(sample_text).tolist()[0])
+        expected_dimension = len(embedding_model.encode(sample_text)[0]) # Removed .tolist()
     elif config.EMBEDDING_API_URL and config.DEEPSEEK_API_KEY:
         expected_dimension = len(remote_embed_call(sample_text)[0])
     else:
@@ -160,17 +170,17 @@ class RAGResponse(BaseModel):
 
 # --- FastAPI Endpoints ---
 @app.post("/rag_query", response_model=RAGResponse)
-async def rag_query(query_data: RAGQuery, request: Request):
+async def rag_query(query_data: RAGQuery):
     
     logging.info(f"Received RAG query: {query_data.query}, Product Model: {query_data.product_model}, User requests to show thought process: {query_data.show_thought_process}")
 
     # 1. Embed the user's query
     query_embedding: List[float]
     if embedding_model:
-        query_embedding = embedding_model.encode(query_data.query).tolist()
+        query_embedding = embedding_model.encode([query_data.query])[0] # Ensure query is always a list
         logging.info("Query embedded using local/downloaded model.")
     elif config.EMBEDDING_API_URL and config.DEEPSEEK_API_KEY:
-        query_embedding = remote_embed_call([query_data.query])[0]
+        query_embedding = remote_embed_call([query_data.query])[0] # Ensure query is always a list
         logging.info("Query embedded using remote API.")
     else:
         logging.error("No embedding model loaded and remote embedding API not configured. Cannot process query.")
@@ -246,7 +256,7 @@ async def rag_query(query_data: RAGQuery, request: Request):
     else:
         logging.info("Returning full LLM response including thought process.")
             
-    logging.info(f"Final summary to be sent to frontend: {final_summary[:500]}...") # Log truncated final summary
+    #logging.info(f"Final summary to be sent to frontend: {final_summary[:500]}...") # Log truncated final summary
     return RAGResponse(summary=final_summary, source_documents=source_documents)
 
 
