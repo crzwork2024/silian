@@ -10,6 +10,7 @@ import requests
 import logging
 import os
 import sys
+import time # Import the time module
 
 # Add the parent directory to the Python path to allow importing config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -138,25 +139,84 @@ except Exception as e:
     sys.exit(1)
 
 # --- LLM API Call Function ---
-def deepseek_call(prompt: str) -> str:
-    """Calls the DeepSeek API with the given prompt."""
+def _siliconflow_call(prompt: str) -> str:
+    """Calls the SiliconFlow API with the given prompt."""
+    logging.info(f"Invoking SiliconFlow LLM with model: {config.SILICONFLOW_MODEL_ID}")
+    start_time = time.time()
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"
+        "Authorization": f"Bearer {config.SILICONFLOW_API_KEY}"
     }
     payload = {
-        "model": config.MODEL_ID,
+        "model": config.SILICONFLOW_MODEL_ID,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.0,
-        "max_tokens": 2048 # Reduced max_tokens to a common value to avoid potential API limits
+        "max_tokens": 2048
     }
     try:
-        resp = requests.post(config.API_URL, headers=headers, json=payload, timeout=120)
+        resp = requests.post(config.SILICONFLOW_API_URL, headers=headers, json=payload, timeout=120)
         resp.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        end_time = time.time()
+        logging.info(f"SiliconFlow LLM call completed in {end_time - start_time:.2f} seconds.")
         return resp.json()["choices"][0]["message"]["content"].strip()
     except requests.exceptions.RequestException as e:
-        logging.error(f"DeepSeek API call failed: {e}")
+        logging.error(f"SiliconFlow API call failed: {e}")
         raise HTTPException(status_code=500, detail=f"LLM API error: {e}")
+
+def _ollama_call(prompt: str, show_thought_process: bool) -> str:
+    """
+    Calls a local Ollama model (e.g., deepseek-r1:8b).
+    Adds system prompt to force <think> output if requested.
+    """
+
+    logging.info(f"Ollama model invoked: {config.OLLAMA_MODEL_ID}")
+    start_time = time.time()
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": config.OLLAMA_MODEL_ID,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.0,
+        "max_tokens": 128000,
+        "stream": False,
+        "options": {"raw": True}  # Key: include <think>
+    }
+
+    try:
+        resp = requests.post(config.OLLAMA_API_URL, headers=headers, json=payload, timeout=600)
+        resp.raise_for_status()
+        end_time = time.time()
+        logging.info(f"Ollama LLM call completed in {end_time - start_time:.2f} seconds.")
+        result = resp.json()
+        return result["message"]["content"].strip()
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Ollama API call failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Local LLM error: {e}")
+
+def llm_call(prompt: str, show_thought_process: bool = False) -> str:
+    """
+    Unified LLM call that supports:
+    - SiliconFlow remote API (SiliconFlow)
+    - Ollama local model
+    The provider is selected via config.LLM_PROVIDER.
+    """
+
+    if config.LLM_PROVIDER == "siliconflow":
+        logging.info(f"Invoking SiliconFlow LLM with model: {config.SILICONFLOW_MODEL_ID}")
+        return _siliconflow_call(prompt)
+
+    elif config.LLM_PROVIDER == "ollama":
+        logging.info(f"Invoking Ollama LLM with model: {config.OLLAMA_MODEL_ID}")
+        return _ollama_call(prompt, show_thought_process)
+
+    else:
+        raise HTTPException(status_code=500, detail=f"Unknown LLM provider: {config.LLM_PROVIDER}")
 
 # --- FastAPI Models ---
 class RAGQuery(BaseModel):
@@ -193,6 +253,7 @@ async def rag_query(query_data: RAGQuery):
         logging.info(f"Filtering RAG query by product model: {query_data.product_model}")
 
     # 3. Query ChromaDB for relevant documents
+    start_time = time.time()
     try:
         results = rag_collection.query(
             query_embeddings=[query_embedding],
@@ -200,7 +261,8 @@ async def rag_query(query_data: RAGQuery):
             where=where_clause if where_clause else None,
             include=['documents', 'metadatas', 'distances']
         )
-        logging.info(f"ChromaDB query returned {len(results['documents'][0]) if results['documents'] else 0} results.")
+        end_time = time.time()
+        logging.info(f"ChromaDB query returned {len(results['documents'][0]) if results['documents'] else 0} results in {end_time - start_time:.2f} seconds.")
     except Exception as e:
         logging.error(f"ChromaDB query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Vector database query error: {e}")
@@ -240,7 +302,7 @@ async def rag_query(query_data: RAGQuery):
     )
     
     logging.info("Sending prompt to LLM...")
-    llm_raw_response = deepseek_call(prompt)
+    llm_raw_response = llm_call(prompt, query_data.show_thought_process)
     logging.info("Received raw response from LLM.")
 
     final_summary = llm_raw_response

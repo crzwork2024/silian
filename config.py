@@ -13,11 +13,12 @@ BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 # --- Data Files ---
-EXCEL_FILE_PATH = os.path.join(DATA_DIR, "fault_data.xlsx")
+#EXCEL_FILE_PATH = os.path.join(DATA_DIR, "fault_data.xlsx")
+EXCEL_FILE_PATH = os.path.join(DATA_DIR, "mro例子数据.xlsx")
 
 # --- ChromaDB Configuration ---
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "chroma_db")
-COLLECTION_NAME = "fault_descriptions_local_model" # Changed collection name to force recreation
+COLLECTION_NAME = "real_data_local_model" # Changed collection name to force recreation
 #COLLECTION_NAME = "fault_descriptions_remote_model" # Changed collection name to force recreation
 
 # --- Embedding Model Configuration ---
@@ -27,9 +28,15 @@ REMOTE_EMBEDDING_MODEL_ID = "BAAI/bge-large-zh-v1.5" # Explicitly define remote 
 EMBEDDING_API_URL = "https://api.siliconflow.cn/v1/embeddings"
 
 # --- LLM API Configuration ---
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-MODEL_ID = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY")
+SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/chat/completions" # Renamed for clarity
+SILICONFLOW_MODEL_ID = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" # Renamed for clarity
+
+OLLAMA_API_URL = "http://localhost:11434/api/chat"
+OLLAMA_MODEL_ID = "deepseek-r1:8b"
+
+# --- LLM Provider Configuration ---
+LLM_PROVIDER = "ollama" # Options: "siliconflow", "ollama"
 
 # --- Excel Column Mappings (adjust these to match your Excel file) ---
 # These are the column names in your Excel sheet that the program will use.
@@ -42,7 +49,7 @@ EXCEL_COL_FAULT_DESCRIPTION = "故障描述"
 EXCEL_COL_SOLUTION = "处理方式及未解决问题"
 
 # --- RAG System Configuration ---
-TOP_K_RESULTS = 2  # Number of similar records to retrieve from ChromaDB
+TOP_K_RESULTS = 5  # Number of similar records to retrieve from ChromaDB
 
 # --- Logging Configuration ---
 LOG_FILE_PATH = os.path.join(BASE_DIR, "rag_system.log")
