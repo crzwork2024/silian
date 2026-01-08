@@ -112,4 +112,93 @@ This project implements a Retrieval-Augmented Generation (RAG) system for fault 
 *   Add more sophisticated error handling and user feedback.
 *   Explore different embedding models and LLMs.
 *   Implement a caching mechanism for frequently asked queries.
+
+## 项目架构与配置说明（中文）
+
+**项目概览：** 本项目实现了基于检索增强生成（RAG）的故障诊断系统。后端使用 FastAPI 提供查询接口，前端为一个简单的静态页面，向后端发送故障描述并展示 LLM 生成的诊断和检索到的历史记录。
+
+**目录与关键文件说明：**
+- **根目录**: 存放 `README.md`、`config.py`、`requirements.txt` 等项目级配置与说明。
+- **`backend/`**: 后端代码。
+    - `main.py`: FastAPI 应用，包含 RAG 查询接口和产品型号下拉接口。
+    - `data_processor.py`: 读取 Excel、生成嵌入并将数据写入 ChromaDB 的脚本。
+    - `dummy_excel.py`: 生成示例 Excel 文件以便测试。
+- **`data/`**: 数据与 ChromaDB 持久化目录（默认 `data/chroma_db`）。
+- **`frontend/`**: 前端静态页面（`index.html`、`script.js`、`style.css`）。
+- **`model/`**: 本地嵌入模型（可选）。
+- **`config.py`**: 中央配置文件，包含路径、API 地址、模型 ID 与 Excel 列名映射。
+
+**`config.py` 主要配置项（要点）**
+- `BASE_DIR`, `DATA_DIR`, `MODEL_DIR`, `BACKEND_DIR`, `FRONTEND_DIR`: 项目路径基准，通常不需修改。
+- `EXCEL_FILE_PATH`: 默认指向 `data/mro例子数据.xlsx`，可替换为 `data/fault_data.xlsx`（或你的实际文件名）。确保文件存在且首行列名与下面映射一致。
+- `CHROMA_DB_PATH`: ChromaDB 的持久化目录（默认 `data/chroma_db`）。
+- `COLLECTION_NAME`: Chroma 中的集合名称，变更会导致程序在下次写入时创建新集合（可用于刷新索引）。
+- `EMBEDDING_MODEL_PATH`: 优先使用的本地嵌入模型路径；如果想强制使用远端嵌入服务，可将其设置为一个无效路径（代码中有注释说明）。
+- `REMOTE_EMBEDDING_MODEL_ID` 与 `EMBEDDING_API_URL`: 远端嵌入服务的模型 ID 与接口（当使用远端时生效）。
+- `SILICONFLOW_API_KEY`: 从环境变量读取（通过 `.env` 文件加载）。请在项目根创建 `.env` 并设置该变量以调用 `siliconflow` 服务。
+- `SILICONFLOW_API_URL`, `SILICONFLOW_MODEL_ID`: 使用 `siliconflow` 提供者时的 API 地址与模型 ID。
+- `OLLAMA_API_URL`, `OLLAMA_MODEL_ID`: 本地 Ollama 服务的地址与模型 ID（如使用 Ollama 时配置）。
+- `LLM_PROVIDER`: 指定使用的 LLM 提供者，选项示例：`"siliconflow"` 或 `"ollama"`。
+- Excel 列映射（必须与 Excel 表头完全一致）：
+    - `EXCEL_COL_PRODUCT_MODEL`：产品型号（示例值："产品型号"）
+    - `EXCEL_COL_PRODUCT_NUMBER`：产品编号
+    - `EXCEL_COL_FAULT_LOCATION`：终判故障部位
+    - `EXCEL_COL_FAULT_MODE`：终判故障模式
+    - `EXCEL_COL_FAULT_DESCRIPTION`：故障描述（用于生成嵌入与检索）
+    - `EXCEL_COL_SOLUTION`：处理方式及未解决问题（展示给用户）
+- `TOP_K_RESULTS`: 从向量库检索的相似记录数，默认 5，可根据需求调整。
+- `LOG_FILE_PATH`, `LOG_LEVEL`: 日志文件与日志级别配置。
+
+**快速上手（中文）**
+1. 创建并激活虚拟环境：
+
+```bash
+python -m venv venv
+# Windows
+.\venv\Scripts\activate
+# macOS / Linux
+# source venv/bin/activate
+```
+
+2. 安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+3. 在项目根创建 `.env`，至少包含：
+
+```
+SILICONFLOW_API_KEY="你的实际密钥"
+```
+
+4. （可选）生成示例 Excel：
+
+```bash
+python backend/dummy_excel.py
+```
+
+5. 处理并写入向量库（生成嵌入）：
+
+```bash
+python backend/data_processor.py
+```
+
+6. 启动后端：
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+7. 打开浏览器访问 `http://127.0.0.1:8000` 查看前端页面。
+
+**调试与注意事项**
+- 如果你希望使用远端嵌入服务：将 `EMBEDDING_MODEL_PATH` 设置为不可用路径或直接修改使用远端的逻辑，并设置好 `REMOTE_EMBEDDING_MODEL_ID` 与 `EMBEDDING_API_URL`。
+- 更改 `COLLECTION_NAME` 会创建新的集合（相当于刷新索引），如果只是想追加/更新记录请保持不变。
+- Excel 列名必须精确匹配 `config.py` 中的映射，否则 `data_processor.py` 无法正确解析列数据。
+- Chroma 返回的 `distance` 值表示相似度的反向度量，值越小表示越相似（0 表示完全匹配）。
+
+如果你希望我继续：
+- 我可以帮助检查 `backend/main.py` 的 API 文档化，或将 `README.md` 的中文部分翻译成更详细的使用示例并附带截图说明（如果需要）。
+
 *   Containerize the application using Docker for easier deployment.

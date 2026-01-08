@@ -13,17 +13,17 @@ BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 # --- Data Files ---
-#EXCEL_FILE_PATH = os.path.join(DATA_DIR, "fault_data.xlsx")
-EXCEL_FILE_PATH = os.path.join(DATA_DIR, "mro例子数据.xlsx")
+EXCEL_FILE_PATH = os.path.join(DATA_DIR, "fault_data.xlsx")
+#EXCEL_FILE_PATH = os.path.join(DATA_DIR, "mro例子数据.xlsx")
 
 # --- ChromaDB Configuration ---
 CHROMA_DB_PATH = os.path.join(DATA_DIR, "chroma_db")
-COLLECTION_NAME = "real_data_local_model" # Changed collection name to force recreation
-#COLLECTION_NAME = "fault_descriptions_remote_model" # Changed collection name to force recreation
+#COLLECTION_NAME = "real_data_local_model" # Changed collection name to force recreation
+COLLECTION_NAME = "fault_descriptions_remote_model" # Changed collection name to force recreation
 
 # --- Embedding Model Configuration ---
-EMBEDDING_MODEL_PATH = os.path.join(BASE_DIR, "model", "acge_text_embedding")
-#EMBEDDING_MODEL_PATH = "force_remote_embedding" # Set to a non-existent path to force remote embedding
+#EMBEDDING_MODEL_PATH = os.path.join(BASE_DIR, "model", "acge_text_embedding")
+EMBEDDING_MODEL_PATH = "force_remote_embedding" # Set to a non-existent path to force remote embedding
 REMOTE_EMBEDDING_MODEL_ID = "BAAI/bge-large-zh-v1.5" # Explicitly define remote model ID
 EMBEDDING_API_URL = "https://api.siliconflow.cn/v1/embeddings"
 
@@ -36,7 +36,7 @@ OLLAMA_API_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL_ID = "deepseek-r1:8b"
 
 # --- LLM Provider Configuration ---
-LLM_PROVIDER = "ollama" # Options: "siliconflow", "ollama"
+LLM_PROVIDER = "siliconflow" # Options: "siliconflow", "ollama"
 
 # --- Excel Column Mappings (adjust these to match your Excel file) ---
 # These are the column names in your Excel sheet that the program will use.

@@ -52,7 +52,7 @@ def remote_embed_call(texts: List[str]) -> List[List[float]]:
     """Calls the remote embedding API to get embeddings for the given texts."""
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"
+        "Authorization": f"Bearer {config.SILICONFLOW_API_KEY}"
     }
     payload = {
         "model": config.REMOTE_EMBEDDING_MODEL_ID, # Use the explicitly defined remote model ID

@@ -61,7 +61,7 @@ def remote_embed_call(texts: List[str]) -> List[List[float]]:
     """Calls the remote embedding API to get embeddings for the given texts."""
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}"
+        "Authorization": f"Bearer {config.SILICONFLOW_API_KEY}"
     }
     payload = {
         "model": config.REMOTE_EMBEDDING_MODEL_ID, # Use the explicitly defined remote model ID
@@ -118,7 +118,7 @@ try:
     expected_dimension: int
     if embedding_model:
         expected_dimension = len(embedding_model.encode(sample_text)[0]) # Removed .tolist()
-    elif config.EMBEDDING_API_URL and config.DEEPSEEK_API_KEY:
+    elif config.EMBEDDING_API_URL and config.SILICONFLOW_API_KEY:
         expected_dimension = len(remote_embed_call(sample_text)[0])
     else:
         logging.error("No embedding model loaded and remote embedding API not configured. Cannot determine expected embedding dimension for backend. Exiting.")
@@ -239,7 +239,7 @@ async def rag_query(query_data: RAGQuery):
     if embedding_model:
         query_embedding = embedding_model.encode([query_data.query])[0] # Ensure query is always a list
         logging.info("Query embedded using local/downloaded model.")
-    elif config.EMBEDDING_API_URL and config.DEEPSEEK_API_KEY:
+    elif config.EMBEDDING_API_URL and config.SILICONFLOW_API_KEY:
         query_embedding = remote_embed_call([query_data.query])[0] # Ensure query is always a list
         logging.info("Query embedded using remote API.")
     else:
